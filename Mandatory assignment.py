@@ -34,11 +34,11 @@ u.marginal_plots(msft_neg,name_list[1]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,marke
 u.marginal_plots(mrk_neg,name_list[2]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
 u.marginal_plots(idu_neg,name_list[3]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
 
-# Google seems adequately fit by a t-distr. with df=6 or df=4
-# Msft df =4 is reasonable.
+# Google seems adequately fit by a t-distr. with df=3
+# Msft df =3 is reasonable.
 # Merck df=3 seems reasonable.
 # IDU df=2 seems adequate (maybe df=3 if we want second moment)
-dflist = [5,3,3,3]
+dflist = [3,3,3,3]
 
 ### 2. upper tail distributions of losses using EVT. 
 # Note this is only meaningfull for positive values of X
