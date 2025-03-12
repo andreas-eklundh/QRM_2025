@@ -422,4 +422,3 @@ L_cop_pf2 = L_fun((-1)*X_gauss2.T,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Empirical VaR PF2 {VaR_cop_pf2}")
 
-
