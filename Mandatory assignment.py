@@ -217,41 +217,58 @@ fig.tight_layout()
 plt.show()
 
 # Propose eliptical distributions for the pair.
-# Not totally functioning. 
-# T-distributions could make sense in either case
-d = X_pf1_neg.T.shape[1]
-nu_init,mu_init,sigma_init  = 4, np.mean(X_pf1_neg.T, axis=0),np.cov(X_pf1_neg)
-A_init = np.linalg.cholesky(sigma_init)
-params_init = np.hstack(([nu_init], mu_init, A_init.flatten()))
-#params_init = np.hstack(([nu_init], mu_init, sigma_init.flatten()))
-# Optimize the negative log-likelihood
-result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf1_neg.T), method='Nelder-Mead', options={'fatol': 1e-20})
-# Extract estimated parameters
-nu_pf1 = result.x[0]
-mu_pf1 = result.x[1:d+1]
-A_pf1 = np.reshape(result.x[d+1:], (d, d))
-sigma_pf1 = A_pf1 @ A_pf1.T
-#sigma_pf1 = np.reshape(result.x[d+1:], (d, d))
+# Estimate mu and covariance matrix from empirical data.
+# Then optimize over nu for the t-distribution.
+# Portfolio 1
+X1 = X_pf1_neg.T  # Shape: (n_samples, d)
+mu_fixed1 = np.mean(X1, axis=0)  # Fixed mean vector
+sigma_fixed1 = np.cov(X1, rowvar=False)  # Fixed covariance matrix
+sigma_fixed1 += np.eye(sigma_fixed1.shape[0]) * 1e-6  # Regularization, so it is not singular
 
-result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf2_neg.T), method='Nelder-Mead', options={'fatol': 1e-20})
-# Extract estimated parameters
-nu_pf2 = result.x[0]
-mu_pf2 = result.x[1:d+1]
-A_pf2= np.reshape(result.x[d+1:], (d, d))
-sigma_pf2 = A_pf2 @ A_pf2.T
-#sigma_pf2 = np.reshape(result.x[d+1:], (d, d))
+# Initial value for nu
+nu_init = np.array([10])  # Starting value in an array format
 
-print(f'Estimated parameters for portfolio 1: nu={nu_pf1}, mu={mu_pf1}, sigma={sigma_pf1}')
-print(f'Estimated parameters for portfolio 2: nu={nu_pf2}, mu={mu_pf2}, sigma={sigma_pf2}')
-# Fit done - Don't know how to fit more
+# Optimize only over nu
+result1 = minimize(
+    u.multivariate_t_log_likelihood_dfs, nu_init,
+    args=(X1, mu_fixed1, sigma_fixed1),
+    method='Nelder-Mead',
+    bounds=[(2.1, None)],  # Ensure nu > 2
+    options={'fatol': 1e-10}
+)
+
+# Extract optimized degrees of freedom
+nu_pf1 = result1.x[0]
+dispersion_matrix1 = sigma_fixed1 * (nu_pf1 - 2) / nu_pf1
+
+X2 = X_pf2_neg.T  # Shape: (n_samples, d)
+mu_fixed2 = np.mean(X2, axis=0)  # Fixed mean vector
+sigma_fixed2 = np.cov(X2, rowvar=False)  # Fixed covariance matrix
+sigma_fixed2 += np.eye(sigma_fixed2.shape[0]) * 1e-6  # Regularization, so it is not singular
+
+# Optimize only over nu
+result2 = minimize(
+    u.multivariate_t_log_likelihood_dfs, nu_init,
+    args=(X2, mu_fixed2, sigma_fixed2),
+    method='Nelder-Mead',
+    bounds=[(2.1, None)],  # Ensure nu > 2
+    options={'fatol': 1e-10}
+)
+
+# Extract optimized degrees of freedom
+nu_pf2 = result2.x[0]
+dispersion_matrix2 = sigma_fixed2 * (nu_pf2 - 2) / nu_pf2
+
+# Print results
+print(f'Estimated parameters for portfolio 1: nu={nu_pf1}, mu={mu_fixed1}, sigma={dispersion_matrix1}')
+print(f'Estimated parameters for portfolio 2: nu={nu_pf2}, mu={mu_fixed2}, sigma={dispersion_matrix2}')
+
 # Scatter plot of pairs with fitted eliptical distribution.
-import scipy.stats as stats
-
 # Number of simulated points
 n_sim = X_pf1_neg.shape[1] 
 # Simulate from fitted Multivariate t-distribution
-sim_pf1 = stats.multivariate_t.rvs(df=nu_pf1, loc=mu_pf1, shape=sigma_pf1, size=n_sim)
-sim_pf2 = stats.multivariate_t.rvs(df=nu_pf2, loc=mu_pf2, shape=sigma_pf2, size=n_sim)
+sim_pf1 = mt.rvs(df=nu_pf1, loc=mu_fixed1, shape=dispersion_matrix1, size=n_sim)
+sim_pf2 = mt.rvs(df=nu_pf2, loc=mu_fixed2, shape=dispersion_matrix2, size=n_sim)
 
 # Extract simulated values
 sim_goog, sim_msft = sim_pf1[:, 0], sim_pf1[:, 1]
@@ -282,8 +299,6 @@ ax2.legend()
 
 fig.tight_layout()
 plt.show()
-
-
 
 ### 4. Copula approach.
 # For marginals, combine to get distribution fcts. 
@@ -335,7 +350,7 @@ copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 10**6
+N_sim = 10**5
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -401,36 +416,24 @@ def L_fun(X,S0):
 # Tech portfolio
 L_emp_pf1 = L_fun((-1)*X_pf1_neg.T,S_0)
 VaR_emp_pf1 = u.VaR(L_emp_pf1,var_thres)
-print(f"Empirical VaR PF1 {VaR_emp_pf1.round(3)}")
+print(f"Empirical VaR PF1 {VaR_emp_pf1}")
 
 # Other index. 
 L_emp_pf2 = L_fun((-1)*X_pf2_neg.T,S_0)
 VaR_emp_pf2 = u.VaR(L_emp_pf2,var_thres)
-print(f"Empirical VaR PF2 {VaR_emp_pf2.round(3)}")
+print(f"Empirical VaR PF2 {VaR_emp_pf2}")
 
 ## Elliptical approach. 
-# Simulate again urins N_sim
-X_elliptical1 = stats.multivariate_t.rvs(df=nu_pf1, loc=mu_pf1, shape=sigma_pf1, size=N_sim)
-X_elliptical2 = stats.multivariate_t.rvs(df=nu_pf2, loc=mu_pf2, shape=sigma_pf2, size=N_sim)
+# TODO:
 
-# VaR calc 
-# Tech index.
-L_el_pf1 = L_fun((-1)*X_elliptical1,S_0)
-VaR_el_pf1 = u.VaR(L_el_pf1,var_thres)
-print(f"Elliptical VaR PF1 {VaR_el_pf1.round(3)}")
 
-# Other index. 
-L_el_pf2 = L_fun((-1)*X_elliptical2,S_0)
-VaR_el_pf2 = u.VaR(L_el_pf2,var_thres)
-print(f"Elliptical VaR PF2 {VaR_el_pf2.round(3)}")
-
-## Copula (Gaussian) Approach: 
-L_cop_pf1 = L_fun((-1)*X_gauss1,S_0)
+## Copula Approach: 
+L_cop_pf1 = L_fun((-1)*X_gauss1.T,S_0)
 VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+print(f"Empirical VaR PF1 {VaR_cop_pf1}")
 
 # Other index. 
-L_cop_pf2 = L_fun((-1)*X_gauss2,S_0)
+L_cop_pf2 = L_fun((-1)*X_gauss2.T,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+print(f"Empirical VaR PF2 {VaR_cop_pf2}")
 

@@ -134,7 +134,35 @@ def multivariate_t_log_likelihood(params, data):
     
     return -np.sum(dist.logpdf(data))
 
+def multivariate_t_log_likelihood_dfs(params, data, mu, sigma):
+    """
+    Compute the negative log-likelihood of a multivariate t-distribution 
+    while keeping mu (mean) and sigma (covariance) fixed.
 
+    Parameters:
+        - params: Array containing only the degrees of freedom (nu).
+        - data: Stock return data (n_samples, d).
+        - mu: Fixed mean vector (d,).
+        - sigma: Fixed covariance matrix (d, d).
+
+    Returns:
+        - Negative log-likelihood value.
+    """
+    
+    d = data.shape[1]  # Number of dimensions
+    nu = params[0]  # Degrees of freedom (only parameter being optimized)
+
+    # Ensure nu > 2 for finite variance
+    if nu <= 2:
+        return np.inf  
+
+    dispersion_matrix = sigma * (nu - 2) / nu  # Convert covariance to dispersion
+
+    # Define Multivariate t-distribution with fixed mu and dispersion matrix
+    dist = mt(df=nu, loc=mu, shape=dispersion_matrix)
+
+    # Compute and return negative log-likelihood
+    return -np.sum(dist.logpdf(data))
 
 ### FOR INVESTIGATING COMONOCITY AND COUNTERMONOCITY.
 
