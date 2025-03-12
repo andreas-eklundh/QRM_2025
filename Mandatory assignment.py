@@ -350,7 +350,7 @@ copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 10**5
+N_sim = 10**6
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -441,24 +441,45 @@ def L_fun(X,S0):
 # Tech portfolio
 L_emp_pf1 = L_fun((-1)*X_pf1_neg.T,S_0)
 VaR_emp_pf1 = u.VaR(L_emp_pf1,var_thres)
-print(f"Empirical VaR PF1 {VaR_emp_pf1}")
+print(f"Empirical VaR PF1 {VaR_emp_pf1.round(3)}")
 
 # Other index. 
 L_emp_pf2 = L_fun((-1)*X_pf2_neg.T,S_0)
 VaR_emp_pf2 = u.VaR(L_emp_pf2,var_thres)
-print(f"Empirical VaR PF2 {VaR_emp_pf2}")
+print(f"Empirical VaR PF2 {VaR_emp_pf2.round(3)}")
 
 ## Elliptical approach. 
-# TODO:
+# Simulate again urins N_sim
+X_elliptical1 = mt.rvs(df=nu_pf1, loc=mu_fixed1, shape=dispersion_matrix1, size=N_sim)
+X_elliptical2 = mt.rvs(df=nu_pf2, loc=mu_fixed2, shape=dispersion_matrix2, size=N_sim)
 
-
-## Copula Approach: 
-L_cop_pf1 = L_fun((-1)*X_gauss1.T,S_0)
-VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"Empirical VaR PF1 {VaR_cop_pf1}")
+# VaR calc 
+# Tech index.
+L_el_pf1 = L_fun((-1)*X_elliptical1,S_0)
+VaR_el_pf1 = u.VaR(L_el_pf1,var_thres)
+print(f"Elliptical VaR PF1 {VaR_el_pf1.round(3)}")
 
 # Other index. 
-L_cop_pf2 = L_fun((-1)*X_gauss2.T,S_0)
-VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"Empirical VaR PF2 {VaR_cop_pf2}")
+L_el_pf2 = L_fun((-1)*X_elliptical2,S_0)
+VaR_el_pf2 = u.VaR(L_el_pf2,var_thres)
+print(f"Elliptical VaR PF2 {VaR_el_pf2.round(3)}")
 
+## Copula (Gaussian) Approach: 
+L_cop_pf1 = L_fun((-1)*X_gauss1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Gaussian Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_gauss2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Gaussian Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+## Copula (Gumbel) Approach: 
+L_cop_pf1 = L_fun((-1)*X_gumb1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Gumbel Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_gumb2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Gumbel Copula VaR PF2 {VaR_cop_pf2.round(3)}")
