@@ -66,7 +66,7 @@ def GDP_emp(X,u,beta,gamma):
         if X[i] <= u:
             F_margin[i] = np.sum(X[:i+1] <= u) /  n_obs
         else: 
-            F_n_u_bar = 1 - GPD_fun(gamma,beta,X[i])
+            F_n_u_bar = 1 - GPD_fun(gamma,beta,X[i]-u)
             F_n_bar = N_u / n_obs
             F_bar_upx = F_n_bar * F_n_u_bar
             F_bar_upx_upp = 1 - F_bar_upx
@@ -75,15 +75,17 @@ def GDP_emp(X,u,beta,gamma):
     return F_margin
 
 def inverse_GDP_emp(U,X_emp,u,beta,gamma):
-    x_sorted = - np.sort(-X_emp) # Sort decending. 
+    n = X_emp.shape[0]
+    x_sorted = - np.sort( - X_emp) # Sort decending. 
     k_idx = np.argmin(x_sorted>u) - 1 
+    N_u = np.sum(X_emp > u)
     F_margin = GDP_emp(X_emp,u,beta,gamma)
     F_margin_sort = - np.sort(-F_margin) 
     out = np.zeros(U.shape[0])
     for i in range(out.shape[0]):
     # If slightly above empirical section -> Inverse GDP
         if U[i] > F_margin_sort[k_idx]:
-            out[i] = beta*((1-U[i])**(-gamma)-1)/gamma
+            out[i] = u + beta*((n*(1-U[i])/N_u)**(-gamma)-1)/gamma
         else:
             out[i] = generel_inverse(X_emp,F_margin,U[i])
     return out
@@ -125,10 +127,9 @@ def multivariate_t_log_likelihood(params, data):
     d = data.shape[1]  # Number of dimensions
     nu = params[0]  # Degrees of freedom
     mu = params[1:d+1]  # Location vector
-    
-    D = np.reshape(params[d+1:], (d, d)) # Cholesky decomposition of covariance
+    A = np.tril(np.reshape(params[d+1:], (d, d)))  # Lower-triangular Cholesky factor of Covariance
 
-    sigma = D @ D.T  # Reconstruct covariance matrix
+    sigma = A @ A.T  # Reconstruct covariance matrix
     dist = mt(loc=mu, shape=sigma, df=nu)
     
     return -np.sum(dist.logpdf(data))

@@ -247,12 +247,19 @@ sigma_pf2 = A_pf2 @ A_pf2.T
 i_list = [0,1,2,3]
 for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i_list):
     x_sorted = - np.sort(-X) # Sort decending. 
+    n = x_sorted.shape[0]
     beta_est = beta_list[i]
     gamma_est = beta_list[i]
     # Get exesses axcross 
     F_marginal = u.GDP_emp(np.sort(x_sorted),x_k,beta_est,gamma_est)
+    F_emp = np.cumsum(np.ones(n)*1/(n))
 
-    plt.plot(np.sort(x_sorted),F_marginal, color='red')
+    # Add empirical
+    plt.plot(np.sort(x_sorted),F_marginal, color='red',
+             label = 'Marginal mixed emp and Gauss')
+    plt.plot(np.sort(x_sorted),F_marginal, color='blue',
+             label = 'Empirical Marginal')
+    plt.legend()
     plt.xlabel("Log returns")
     plt.ylabel("Distribution function")
     plt.grid()
@@ -278,36 +285,65 @@ print(f'rho tau pf2 {rho_tau_pf2}')
 # Propose Copula: 
 # Use t-copula or Gaussian (does not seem to have one tail 
 # dependence over another -> t-dist). 
+copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 10**6
+N_sim = 10**5
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
-
-copulas = u.Copulas()
 rho_mat_1 = np.array([[1,rho_gauss1],
                       [rho_gauss1,1]])
 U_gauss1 = copulas.simul_Gaussian(rho_mat_1,N_sim)
-
 # Convert to returns:
 X_gauss1 = U_gauss1.copy()
 X_gauss1[:,0] = u.inverse_GDP_emp(U_gauss1[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
 X_gauss1[:,1] = u.inverse_GDP_emp(U_gauss1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
-
-plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red')
+plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+plt.legend()
 plt.grid()
 plt.show()
+
+## Try with a Gumbel. 
+theta = 1 / (1-rho_tau_pf1)
+u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
+# We then need to transform to X.
+X_gumb1 = np.empty(shape=u_gumb.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_gumb1[:,0] = u.inverse_GDP_emp(u_gumb[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_gumb1[:,1] = u.inverse_GDP_emp(u_gumb[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
+            label = 'Gumbel Copula',s=1)
+plt.legend()
+plt.grid()
+plt.show()
+
 
 rho_mat_2 = np.array([[1,rho_gauss2],
                       [rho_gauss2,1]])
 
 U_gauss2 = copulas.simul_Gaussian(rho_mat_2,N_sim)
+X_gauss2 = U_gauss2.copy()
+
+X_gauss2[:,0] = u.inverse_GDP_emp(U_gauss2[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_gauss2[:,1] = u.inverse_GDP_emp(U_gauss2[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+
+plt.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+plt.legend()
+plt.grid()
+plt.show()
 
 ### 6. Frechet Bounds
-
+## Comonotonic copula. 
 
 ### 7. Calculate VaR using varous approaches.
 S_0 = 10000
+var_thres = 0.9999
