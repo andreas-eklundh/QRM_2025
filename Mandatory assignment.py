@@ -223,21 +223,67 @@ d = X_pf1_neg.T.shape[1]
 nu_init,mu_init,sigma_init  = 4, np.mean(X_pf1_neg.T, axis=0),np.cov(X_pf1_neg)
 A_init = np.linalg.cholesky(sigma_init)
 params_init = np.hstack(([nu_init], mu_init, A_init.flatten()))
+#params_init = np.hstack(([nu_init], mu_init, sigma_init.flatten()))
 # Optimize the negative log-likelihood
-result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf1_neg.T), method='L-BFGS-B')
+result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf1_neg.T), method='Nelder-Mead', options={'fatol': 1e-20})
 # Extract estimated parameters
 nu_pf1 = result.x[0]
 mu_pf1 = result.x[1:d+1]
 A_pf1 = np.reshape(result.x[d+1:], (d, d))
 sigma_pf1 = A_pf1 @ A_pf1.T
+#sigma_pf1 = np.reshape(result.x[d+1:], (d, d))
 
-result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf2_neg.T), method='L-BFGS-B')
+result = minimize(u.multivariate_t_log_likelihood, params_init, args=(X_pf2_neg.T), method='Nelder-Mead', options={'fatol': 1e-20})
 # Extract estimated parameters
 nu_pf2 = result.x[0]
 mu_pf2 = result.x[1:d+1]
 A_pf2= np.reshape(result.x[d+1:], (d, d))
 sigma_pf2 = A_pf2 @ A_pf2.T
+#sigma_pf2 = np.reshape(result.x[d+1:], (d, d))
+
+print(f'Estimated parameters for portfolio 1: nu={nu_pf1}, mu={mu_pf1}, sigma={sigma_pf1}')
+print(f'Estimated parameters for portfolio 2: nu={nu_pf2}, mu={mu_pf2}, sigma={sigma_pf2}')
 # Fit done - Don't know how to fit more
+# Scatter plot of pairs with fitted eliptical distribution.
+import scipy.stats as stats
+
+# Number of simulated points
+n_sim = X_pf1_neg.shape[1] 
+# Simulate from fitted Multivariate t-distribution
+sim_pf1 = stats.multivariate_t.rvs(df=nu_pf1, loc=mu_pf1, shape=sigma_pf1, size=n_sim)
+sim_pf2 = stats.multivariate_t.rvs(df=nu_pf2, loc=mu_pf2, shape=sigma_pf2, size=n_sim)
+
+# Extract simulated values
+sim_goog, sim_msft = sim_pf1[:, 0], sim_pf1[:, 1]
+sim_mrk, sim_idu = sim_pf2[:, 0], sim_pf2[:, 1]
+
+# Create scatter plots
+fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+
+# Plot Google & Microsoft
+ax1 = ax[0]
+ax1.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax1.scatter(sim_goog, sim_msft, color='red', s=1, alpha=0.5, label="Simulated Data")
+ax1.grid()
+ax1.set_xlabel('Google')
+ax1.set_ylabel('Microsoft')
+ax1.set_title('Log Returns: Google & Microsoft')
+ax1.legend()
+
+# Plot Merck & IDU
+ax2 = ax[1]
+ax2.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax2.scatter(sim_mrk, sim_idu, color='red', s=1, alpha=0.5, label="Simulated Data")
+ax2.grid()
+ax2.set_xlabel('Merck')
+ax2.set_ylabel('IDU')
+ax2.set_title('Log Returns: Merck & IDU')
+ax2.legend()
+
+fig.tight_layout()
+plt.show()
+
+
 
 ### 4. Copula approach.
 # For marginals, combine to get distribution fcts. 

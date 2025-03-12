@@ -128,11 +128,12 @@ def multivariate_t_log_likelihood(params, data):
     nu = params[0]  # Degrees of freedom
     mu = params[1:d+1]  # Location vector
     A = np.tril(np.reshape(params[d+1:], (d, d)))  # Lower-triangular Cholesky factor of Covariance
-
+    #sigma = np.tril(np.reshape(params[d+1:], (d, d)))  # Lower-triangular Cholesky factor of Covariance
     sigma = A @ A.T  # Reconstruct covariance matrix
     dist = mt(loc=mu, shape=sigma, df=nu)
     
     return -np.sum(dist.logpdf(data))
+
 
 
 ### FOR INVESTIGATING COMONOCITY AND COUNTERMONOCITY.
