@@ -345,5 +345,35 @@ plt.show()
 ## Comonotonic copula. 
 
 ### 7. Calculate VaR using varous approaches.
-S_0 = 10000
+S_0 = np.array([10000,10000])
 var_thres = 0.9999
+
+def L_fun(X,S0):
+    return - np.matmul(np.exp(X)-1,S0)
+
+## Empirical values. 
+# Tech portfolio
+L_emp_pf1 = L_fun((-1)*X_pf1_neg.T,S_0)
+VaR_emp_pf1 = u.VaR(L_emp_pf1,var_thres)
+print(f"Empirical VaR PF1 {VaR_emp_pf1}")
+
+# Other index. 
+L_emp_pf2 = L_fun((-1)*X_pf2_neg.T,S_0)
+VaR_emp_pf2 = u.VaR(L_emp_pf2,var_thres)
+print(f"Empirical VaR PF2 {VaR_emp_pf2}")
+
+## Elliptical approach. 
+# TODO:
+
+
+## Copula Approach: 
+L_cop_pf1 = L_fun((-1)*X_gauss1.T,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Empirical VaR PF1 {VaR_cop_pf1}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_gauss2.T,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Empirical VaR PF2 {VaR_cop_pf2}")
+
+
