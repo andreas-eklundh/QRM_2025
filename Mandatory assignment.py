@@ -98,8 +98,8 @@ for X,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],name_list):
 
 # OBS: the X's and k's do not allign yet -> Do negative sort.
 # Get k's - difficult for google nad microsoft.. 
-
-u_goog,u_msft,u_MRK, u_IDU=0.025, 0.04, 0.015, 0.02
+# u_goog,u_msft,u_MRK, u_IDU=0.025, 0.04, 0.015, 0.02
+u_goog,u_msft,u_MRK, u_IDU=0.045, 0.04, 0.015, 0.015
 u_list = [u_goog,u_msft,u_MRK, u_IDU]
 pot_indices,beta_list,gamma_list = [],[],[]
 # Do remainder of analysis. 
@@ -366,6 +366,8 @@ plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
             label = 'Gaussian Copula',s=1)
 plt.legend()
 plt.grid()
+plt.xlabel('Google')
+plt.ylabel('Microsoft')
 plt.show()
 
 ## Try with a Gumbel. 
@@ -382,6 +384,8 @@ plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
             label = 'Gumbel Copula',s=1)
 plt.legend()
 plt.grid()
+plt.xlabel('Google')
+plt.ylabel('Microsoft')
 plt.show()
 
 
@@ -400,7 +404,28 @@ plt.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
             label = 'Gaussian Copula',s=1)
 plt.legend()
 plt.grid()
+plt.xlabel('Merck')
+plt.ylabel('IDU')
 plt.show()
+
+## Try with a Gumbel. 
+theta = 1 / (1-rho_tau_pf2)
+u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
+# We then need to transform to X.
+X_gumb2 = np.empty(shape=u_gumb.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_gumb2[:,0] = u.inverse_GDP_emp(u_gumb[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_gumb2[:,1] = u.inverse_GDP_emp(u_gumb[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+plt.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
+            label = 'Gumbel Copula',s=1)
+plt.xlabel('Merck')
+plt.ylabel('IDU')
+plt.legend()
+plt.grid()
+plt.show()
+
 
 ### 6. Frechet Bounds
 ## Comonotonic copula. 
