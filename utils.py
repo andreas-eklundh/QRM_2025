@@ -275,7 +275,7 @@ class Copulas():
 
     
 ### Marginal distribution plots -> 1 Gaussian and 3 t-distributions 
-def marginal_plots(X,df1,df2,df3,df4,df5,markersize):
+def marginal_plots(X,fig_name,df1,df2,df3,df4,df5,markersize):
     X_sorted = np.sort(X)
     #X_mean = np.mean(X_sorted)
     #X_std = np.std(X_sorted)
@@ -338,4 +338,5 @@ def marginal_plots(X,df1,df2,df3,df4,df5,markersize):
     ax6.set_ylabel('Empirical quantiles')
     ax6.set_title(f'T-distribution, df={df5}')
     fig.tight_layout()
+    plt.savefig(f'Figures/{fig_name}.png')
     plt.show()

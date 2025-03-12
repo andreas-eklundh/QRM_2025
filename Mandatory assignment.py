@@ -29,16 +29,16 @@ goog_neg,msft_neg,mrk_neg,idu_neg = goog*(-1),msft*(-1), mrk*(-1),idu*(-1)
 
 
 ### 1. Marginal distributions for each stock.
-u.marginal_plots(goog_neg,df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
-u.marginal_plots(msft_neg,df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
-u.marginal_plots(mrk_neg,df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
-u.marginal_plots(idu_neg,df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
+u.marginal_plots(goog_neg,name_list[0]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
+u.marginal_plots(msft_neg,name_list[1]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
+u.marginal_plots(mrk_neg,name_list[2]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
+u.marginal_plots(idu_neg,name_list[3]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
 
-# Google seems adequately fit by a t-distr. with df=6 or df=4
-# Msft df =4 is reasonable.
+# Google seems adequately fit by a t-distr. with df=3
+# Msft df =3 is reasonable.
 # Merck df=3 seems reasonable.
 # IDU df=2 seems adequate (maybe df=3 if we want second moment)
-dflist = [5,3,3,3]
+dflist = [3,3,3,3]
 
 ### 2. upper tail distributions of losses using EVT. 
 # Note this is only meaningfull for positive values of X
@@ -55,12 +55,13 @@ for X,name,df in zip([goog_neg,msft_neg,mrk_neg,idu_neg],name_list,dflist):
     alpha_hat_50 = np.array(alpha_hat)
 
     plt.plot(k_grid-1,alpha_hat_50,color = 'black',label='Hill-plot')
-    plt.hlines(y = df,xmin=np.min(k_grid),xmax = np.max(k_grid),color = 'red',label="Index")
+    plt.hlines(y = df,xmin=np.min(k_grid),xmax = np.max(k_grid),color = 'red',label="t-distr index")
     plt.grid()
     plt.xlabel('k')
     plt.ylabel('Alpha estimate')
     plt.title(f'Hill Plot, {name}')
     plt.legend()
+    plt.savefig(f'Figures/{name}_Hill.png')
     plt.show()
 
 # Evidently from the plot, is that the indices obtained from the 
@@ -92,6 +93,7 @@ for X,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],name_list):
     plt.xlabel('x_k,n')
     plt.ylabel("Empirical-mean exess function")
     plt.title(f'Mean-Exess plotm {name}')
+    plt.savefig(f'Figures/{name}_Mean_excess.png')
     plt.show()
 
 # OBS: the X's and k's do not allign yet -> Do negative sort.
