@@ -57,7 +57,7 @@ def GPD_neg_loglike(params,N_u,Z):
 
 # Mandatory assignment -> Create fct combining emp. distr
 # and Pareto.
-def GDP_emp(X,u,beta,gamma):
+def GPD_emp(X,u,beta,gamma):
     n_obs = X.shape[0]
     N_u = np.sum(X > u)
     F_margin = np.zeros(n_obs)
@@ -74,16 +74,16 @@ def GDP_emp(X,u,beta,gamma):
 
     return F_margin
 
-def inverse_GDP_emp(U,X_emp,u,beta,gamma):
+def inverse_GPD_emp(U,X_emp,u,beta,gamma):
     n = X_emp.shape[0]
     x_sorted = - np.sort( - X_emp) # Sort decending. 
     k_idx = np.argmin(x_sorted>u) - 1 
     N_u = np.sum(X_emp > u)
-    F_margin = GDP_emp(X_emp,u,beta,gamma)
+    F_margin = GPD_emp(X_emp,u,beta,gamma)
     F_margin_sort = - np.sort(-F_margin) 
     out = np.zeros(U.shape[0])
     for i in range(out.shape[0]):
-    # If slightly above empirical section -> Inverse GDP
+    # If slightly above empirical section -> Inverse GPD
         if U[i] > F_margin_sort[k_idx]:
             out[i] = u + beta*((n*(1-U[i])/N_u)**(-gamma)-1)/gamma
         else:

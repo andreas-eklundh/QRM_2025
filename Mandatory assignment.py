@@ -312,14 +312,27 @@ for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i
     beta_est = beta_list[i]
     gamma_est = beta_list[i]
     # Get exesses axcross 
-    F_marginal = u.GDP_emp(np.sort(x_sorted),x_k,beta_est,gamma_est)
+    F_marginal = u.GPD_emp(np.sort(x_sorted),x_k,beta_est,gamma_est)
     F_emp = np.cumsum(np.ones(n)*1/(n))
 
     # Add empirical
     plt.plot(np.sort(x_sorted),F_marginal, color='red',
-             label = 'Marginal mixed emp and Gauss')
+             label = 'Marginal mixed emp and GPD')
     plt.plot(np.sort(x_sorted),F_marginal, color='blue',
              label = 'Empirical Marginal')
+    plt.legend()
+    plt.xlabel("Log returns")
+    plt.ylabel("Distribution function")
+    plt.grid()
+    plt.title(f"Marginal distribution {name}")
+    plt.show()
+
+    # plot empirical Quantile plot (generalized inverse)
+    # Add empirical
+    marg_inv = u.inverse_GPD_emp(F_marginal,np.sort(mrk_neg),
+                                  thres,beta_est,gamma_est)
+    plt.plot(F_marginal,F_marginal, color='red',
+             label = 'Marginal inverse mixed emp and Gauss')
     plt.legend()
     plt.xlabel("Log returns")
     plt.ylabel("Distribution function")
@@ -358,9 +371,9 @@ rho_mat_1 = np.array([[1,rho_gauss1],
 U_gauss1 = copulas.simul_Gaussian(rho_mat_1,N_sim)
 # Convert to returns:
 X_gauss1 = U_gauss1.copy()
-X_gauss1[:,0] = u.inverse_GDP_emp(U_gauss1[:,0],np.sort(goog_neg),
+X_gauss1[:,0] = u.inverse_GPD_emp(U_gauss1[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
-X_gauss1[:,1] = u.inverse_GDP_emp(U_gauss1[:,1],np.sort(msft_neg),
+X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
             label = 'Gaussian Copula',s=1)
@@ -376,9 +389,9 @@ u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
 # We then need to transform to X.
 X_gumb1 = np.empty(shape=u_gumb.shape) 
 # Overwrite a matrix -> faster for these large matrices
-X_gumb1[:,0] = u.inverse_GDP_emp(u_gumb[:,0],np.sort(goog_neg),
+X_gumb1[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
-X_gumb1[:,1] = u.inverse_GDP_emp(u_gumb[:,1],np.sort(msft_neg),
+X_gumb1[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
             label = 'Gumbel Copula',s=1)
@@ -395,9 +408,9 @@ rho_mat_2 = np.array([[1,rho_gauss2],
 U_gauss2 = copulas.simul_Gaussian(rho_mat_2,N_sim)
 X_gauss2 = U_gauss2.copy()
 
-X_gauss2[:,0] = u.inverse_GDP_emp(U_gauss2[:,0],np.sort(mrk_neg),
+X_gauss2[:,0] = u.inverse_GPD_emp(U_gauss2[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
-X_gauss2[:,1] = u.inverse_GDP_emp(U_gauss2[:,1],np.sort(idu_neg),
+X_gauss2[:,1] = u.inverse_GPD_emp(U_gauss2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 
 plt.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
@@ -414,9 +427,9 @@ u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
 # We then need to transform to X.
 X_gumb2 = np.empty(shape=u_gumb.shape) 
 # Overwrite a matrix -> faster for these large matrices
-X_gumb2[:,0] = u.inverse_GDP_emp(u_gumb[:,0],np.sort(mrk_neg),
+X_gumb2[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
-X_gumb2[:,1] = u.inverse_GDP_emp(u_gumb[:,1],np.sort(idu_neg),
+X_gumb2[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 plt.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
             label = 'Gumbel Copula',s=1)
