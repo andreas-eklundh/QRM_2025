@@ -67,12 +67,12 @@ for X,name,df in zip([goog_neg,msft_neg,mrk_neg,idu_neg],name_list,dflist):
 # Evidently from the plot, is that the indices obtained from the 
 # QQ plot analysis are not suffucient
 # google MRk idu somewhat easy to read. Difficult msft
-H_k_goog,H_k_msft,H_k_mrk,H_k_idu = 105,160,130,100
+H_k_goog,H_k_msft,H_k_mrk,H_k_idu = 105,165,130,100
 # Note hor these k's, we may have values 
 a_goog,a_msft = u.HillEstimator(goog_neg,H_k_goog), u.HillEstimator(msft_neg,H_k_msft)
 a_mrk,a_idu = u.HillEstimator(mrk_neg,H_k_mrk),u.HillEstimator(idu_neg,H_k_idu)
-print(f"Indixes: google:{a_goog},Microsoft:{a_msft}")
-print(f"MRK:{a_mrk},IDU:{a_idu}")
+print(f"Indixes: google:{a_goog.round(2)},Microsoft:{a_msft.round(2)}")
+print(f"MRK:{a_mrk.round(2)},IDU:{a_idu.round(2)}")
 hill_list = [a_goog,a_msft,a_mrk,a_idu ]
 # Coult then be a t-distr with these dfs, or slowly varying
 # With these indices. 
@@ -206,14 +206,15 @@ ax1.scatter(goog_neg,  msft_neg, color='blue',s=1)
 ax1.grid()
 ax1.set_xlabel('Google')
 ax1.set_ylabel('Microsoft')
-ax1.set_title('Log returns of Google and Microsoft')
+ax1.set_title('Negative Log returns')
 ax2 =  ax[1]
 ax2.scatter(mrk_neg,idu_neg, color='blue',s=1)
 ax2.grid()
 ax2.set_xlabel('Merck')
 ax2.set_ylabel('IDU')
-ax2.set_title(f'Log returns of Merck and IDU')
+ax2.set_title(f'Negative Log returns')
 fig.tight_layout()
+plt.savefig('Figures/PF_plot.png')
 plt.show()
 
 # Propose eliptical distributions for the pair.
@@ -329,9 +330,10 @@ for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i
 
     # plot empirical Quantile plot (generalized inverse)
     # Add empirical
-    marg_inv = u.inverse_GPD_emp(F_marginal,np.sort(mrk_neg),
-                                  thres,beta_est,gamma_est)
-    plt.plot(F_marginal,F_marginal, color='red',
+    # Seems reasonable?
+    marg_inv = u.inverse_GPD_emp(F_marginal,np.sort(X),
+                                 thres,beta_est,gamma_est)
+    plt.plot(F_marginal,marg_inv, color='red',
              label = 'Marginal inverse mixed emp and Gauss')
     plt.legend()
     plt.xlabel("Log returns")
@@ -382,6 +384,24 @@ plt.grid()
 plt.xlabel('Google')
 plt.ylabel('Microsoft')
 plt.show()
+
+## Them 7.43 in McNeil - Same rho_tau relation holds for t-copula.
+# So in principle usable. Looks better? Choose nu? Go w. Gumbel?
+U_gauss1 = copulas.simul_t_distr(rho_mat_1,nu_pf1,N_sim)
+# Convert to returns:
+X_gauss1 = U_gauss1.copy()
+X_gauss1[:,0] = u.inverse_GPD_emp(U_gauss1[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+plt.legend()
+plt.grid()
+plt.xlabel('Google')
+plt.ylabel('Microsoft')
+plt.show()
+
 
 ## Try with a Gumbel. 
 theta = 1 / (1-rho_tau_pf1)
