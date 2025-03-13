@@ -2,7 +2,7 @@
 # Various utils. 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm ,binom, t, expon, invgamma
+from scipy.stats import norm ,binom, t, expon, invgamma, genpareto  
 from scipy.optimize import minimize 
 from scipy.stats import multivariate_normal as mnorm
 from scipy.stats import multivariate_t as mt
@@ -124,8 +124,6 @@ for X,thres,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list):
     beta_list.append(beta_hat)
     gamma_list.append(gamma_hat)
     print(f'Name {name}: Gamma_hat: {gamma_hat}, beta_hat: {beta_hat}')
-    # Not entirely the same as Rasmus, but sufficiently close.
-
     Z_orig_order = np.array(X[X>x_k] - x_k)
     G = u.GPD_fun(gamma_hat,beta_hat,Z_orig_order)
     gen_res = - np.log(G)
@@ -174,17 +172,17 @@ for X,thres,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list):
     plt.show()
     pot_indices.append(1/gamma_hat)
 
-# Seems like a fairly adequate fit. 
+# Seems like a fairly adequate fit. (veryfied w. scipy)
 # The approximation looks good. The mean of residuals
 # is around 1 (running mean - > find another smoother)
 # Also, the QQ plot of generalied residuals lies on a 
 # straight line indicating that the pareto model is 
 # a reasonable choice. 
 # Finally, compare all indeixes: 
-print(f'Google t-index: {dflist[0]}, Hill: {hill_list[0]}, POT: {pot_indices[0]}')
-print(f'Microsoft t-index: {dflist[1]}, Hill: {hill_list[1]}, POT: {pot_indices[1]}')
-print(f'Merck t-index: {dflist[2]}, Hill: {hill_list[2]}, POT: {pot_indices[2]}')
-print(f'IDU t-index: {dflist[3]}, Hill: {hill_list[3]}, POT: {pot_indices[3]}')
+print(f'Google t-index: {dflist[0]}, Hill: {hill_list[0].round(2)}, POT: {pot_indices[0].round(2)}')
+print(f'Microsoft t-index: {dflist[1]}, Hill: {hill_list[1].round(2)}, POT: {pot_indices[1].round(2)}')
+print(f'Merck t-index: {dflist[2]}, Hill: {hill_list[2].round(2)}, POT: {pot_indices[2].round(2)}')
+print(f'IDU t-index: {dflist[3]}, Hill: {hill_list[3].round(2)}, POT: {pot_indices[3].round(2)}')
 
 # Really adequate for Merck and IDU to 
 # use this t-distribution or use it with the 
@@ -365,7 +363,7 @@ copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 10**6
+N_sim = n_sim # 10**3
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -379,6 +377,7 @@ X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
             label = 'Gaussian Copula',s=1)
+plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
 plt.legend()
 plt.grid()
 plt.xlabel('Google')
@@ -396,6 +395,7 @@ X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
             label = 'Gaussian Copula',s=1)
+plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
 plt.legend()
 plt.grid()
 plt.xlabel('Google')
@@ -415,13 +415,14 @@ X_gumb1[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
             label = 'Gumbel Copula',s=1)
+plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
 plt.legend()
 plt.grid()
 plt.xlabel('Google')
 plt.ylabel('Microsoft')
 plt.show()
 
-
+# Scond PF
 rho_mat_2 = np.array([[1,rho_gauss2],
                       [rho_gauss2,1]])
 
@@ -435,6 +436,7 @@ X_gauss2[:,1] = u.inverse_GPD_emp(U_gauss2[:,1],np.sort(idu_neg),
 
 plt.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
             label = 'Gaussian Copula',s=1)
+plt.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
 plt.legend()
 plt.grid()
 plt.xlabel('Merck')
