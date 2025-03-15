@@ -75,15 +75,15 @@ def GPD_emp(X,u,beta,gamma):
     return F_margin
 
 def inverse_GPD_emp(U,X_emp,u,beta,gamma):
-    #n = X_emp.shape[0]
+    n = X_emp.shape[0]
     x_sorted = - np.sort( - X_emp) # Sort decending. 
     k_idx = np.argmin(x_sorted>u) - 1 
-    #N_u = np.sum(X_emp > u)
+    N_u = np.sum(X_emp > u)
     F_margin = GPD_emp(X_emp,u,beta,gamma)
     F_margin_sort = - np.sort(-F_margin) 
     # Now new n and N_u -> utilize more obs.
-    n = U.shape[0]
-    N_u = np.sum(U > F_margin_sort[k_idx])
+    #n = U.shape[0]
+    #N_u = np.sum(U > F_margin_sort[k_idx])
     out = np.zeros(U.shape[0])
     for i in range(out.shape[0]):
     # If slightly above empirical section -> Inverse GPD
@@ -305,7 +305,17 @@ class Copulas():
         # Return both obs and fct val. 
         return U #(U,C_nu_sigma)
     
+    def simul_frechet_bound_W(self,N_sim):
+        U1 = uniform.rvs(size=N_sim)
+        U2 = 1-U1
 
+        return np.array([U1,U2]).T
+    
+    def simul_frechet_bound_M(self,N_sim):
+        U1 = uniform.rvs(size=N_sim)
+        U2 = U1
+
+        return np.array([U1,U2]).T
     
 ### Marginal distribution plots -> 1 Gaussian and 3 t-distributions 
 def marginal_plots(X,fig_name,df1,df2,df3,df4,df5,markersize):

@@ -10,6 +10,9 @@ import pandas as pd
 # Utils
 import utils as u
 
+## Set global seed.
+np.random.seed(2025)
+
 # read data and initial prep. 
 data = pd.read_csv(f'Data/stock_data.csv').sort_values('Date')
 N_obs = len(data['Date'])
@@ -172,24 +175,18 @@ for X,thres,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list):
     plt.show()
     pot_indices.append(1/gamma_hat)
 
-# Seems like a fairly adequate fit. (veryfied w. scipy)
-# The approximation looks good. The mean of residuals
-# is around 1 (running mean - > find another smoother)
-# Also, the QQ plot of generalied residuals lies on a 
-# straight line indicating that the pareto model is 
-# a reasonable choice. 
+
 # Finally, compare all indeixes: 
 print(f'Google t-index: {dflist[0]}, Hill: {hill_list[0].round(2)}, POT: {pot_indices[0].round(2)}')
 print(f'Microsoft t-index: {dflist[1]}, Hill: {hill_list[1].round(2)}, POT: {pot_indices[1].round(2)}')
 print(f'Merck t-index: {dflist[2]}, Hill: {hill_list[2].round(2)}, POT: {pot_indices[2].round(2)}')
 print(f'IDU t-index: {dflist[3]}, Hill: {hill_list[3].round(2)}, POT: {pot_indices[3].round(2)}')
 
-# Really adequate for Merck and IDU to 
-# use this t-distribution or use it with the 
-# EVT obtained indexes. Not as clear for mircrosoft and 
-# google -> Hill plot fairly good, but POT 
-# Does not give good results. 
-# Given the indices, the choises in 1 was reasonable.
+
+print(f'Google beta {beta_list[0].round(4)}, gamma: {gamma_list[0].round(3)}')
+print(f'Microsoft beta {beta_list[1].round(4)}, gamma: {gamma_list[1].round(3)}')
+print(f'Merck beta{beta_list[2].round(4)}, gamma: {gamma_list[2].round(3)}')
+print(f'IDU beta {beta_list[3].round(4)}, gamma: {gamma_list[3].round(3)}')
 
 
 ### 3. Beginning on joint comparisons. 
@@ -317,32 +314,14 @@ for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i
     # Add empirical
     plt.plot(np.sort(x_sorted),F_marginal, color='red',
              label = 'Marginal mixed emp and GPD')
-    plt.plot(np.sort(x_sorted),F_marginal, color='blue',
-             label = 'Empirical Marginal')
     plt.legend()
     plt.xlabel("Log returns")
     plt.ylabel("Distribution function")
     plt.grid()
     plt.title(f"Marginal distribution {name}")
+    plt.savefig(f"Figures/{name}_Marginal.png")
     plt.show()
 
-    # plot empirical Quantile plot (generalized inverse)
-    # Add empirical
-    # Seems reasonable?
-    marg_inv = u.inverse_GPD_emp(F_marginal,np.sort(X),
-                                 thres,beta_est,gamma_est)
-    plt.plot(F_marginal,marg_inv, color='red',
-             label = 'Marginal inverse mixed emp and Gauss')
-    plt.legend()
-    plt.xlabel("Log returns")
-    plt.ylabel("Distribution function")
-    plt.grid()
-    plt.title(f"Marginal distribution {name}")
-    plt.show()
-
-
-# We should in principle be able to perform 
-# Simulations for these marginals. 
 
 ### 5. Exploratory analysis, upper tail dependence
 # Probably to be done for negative returns 
@@ -354,20 +333,19 @@ print(f'rho tau pf2 {rho_tau_pf2}')
 # Microsoft and Google are comonotone. 
 # But in general somewhat comonotone. 
 
-# Upper tail dependence? 
-
 # Propose Copula: 
-# Use t-copula or Gaussian (does not seem to have one tail 
-# dependence over another -> t-dist). 
 copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = n_sim # 10**3
+N_sim = 4*10**5 # n_sim # 10**3
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
                       [rho_gauss1,1]])
+
+# First PF (microsoft and google)
+# Fit Copulas.
 U_gauss1 = copulas.simul_Gaussian(rho_mat_1,N_sim)
 # Convert to returns:
 X_gauss1 = U_gauss1.copy()
@@ -375,36 +353,18 @@ X_gauss1[:,0] = u.inverse_GPD_emp(U_gauss1[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
 X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
-plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
-            label = 'Gaussian Copula',s=1)
-plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-plt.legend()
-plt.grid()
-plt.xlabel('Google')
-plt.ylabel('Microsoft')
-plt.show()
-
-## Them 7.43 in McNeil - Same rho_tau relation holds for t-copula.
+## Thm 7.43 in McNeil - Same rho_tau relation holds for t-copula.
 # So in principle usable. Looks better? Choose nu? Go w. Gumbel?
-U_gauss1 = copulas.simul_t_distr(rho_mat_1,nu_pf1,N_sim)
+U_t1 = copulas.simul_t_distr(rho_mat_1,nu_pf1,N_sim)
 # Convert to returns:
-X_gauss1 = U_gauss1.copy()
-X_gauss1[:,0] = u.inverse_GPD_emp(U_gauss1[:,0],np.sort(goog_neg),
+X_t1 = U_t1.copy()
+X_t1[:,0] = u.inverse_GPD_emp(U_t1[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
-X_gauss1[:,1] = u.inverse_GPD_emp(U_gauss1[:,1],np.sort(msft_neg),
+X_t1[:,1] = u.inverse_GPD_emp(U_t1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
-plt.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
-            label = 'Gaussian Copula',s=1)
-plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-plt.legend()
-plt.grid()
-plt.xlabel('Google')
-plt.ylabel('Microsoft')
-plt.show()
-
-
-## Try with a Gumbel. 
+# Gumbel
 theta = 1 / (1-rho_tau_pf1)
+
 u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
 # We then need to transform to X.
 X_gumb1 = np.empty(shape=u_gumb.shape) 
@@ -413,16 +373,39 @@ X_gumb1[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
 X_gumb1[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
-plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
+
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
+# Plot Google & Microsoft
+ax1 = ax[0,0]
+ax1.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+ax1.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax1.legend()
+ax1.grid()
+ax1.set_xlabel('Google')
+ax1.set_ylabel('Microsoft')
+ax2 = ax[0,1]
+ax2.scatter(X_t1[:,0],X_t1[:,1],color='red',
+            label = 't- Copula',s=1)
+ax2.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax2.legend()
+ax2.grid()
+ax2.set_xlabel('Google')
+ax2.set_ylabel('Microsoft')
+ax3 = ax[1,0]
+ax3.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
             label = 'Gumbel Copula',s=1)
-plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-plt.legend()
-plt.grid()
-plt.xlabel('Google')
-plt.ylabel('Microsoft')
+ax3.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax3.legend()
+ax3.grid()
+ax3.set_xlabel('Google')
+ax3.set_ylabel('Microsoft')
+fig.tight_layout()
 plt.show()
 
-# Scond PF
+
+# Scond PF 
+# FITTING COPULAS
 rho_mat_2 = np.array([[1,rho_gauss2],
                       [rho_gauss2,1]])
 
@@ -433,17 +416,15 @@ X_gauss2[:,0] = u.inverse_GPD_emp(U_gauss2[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
 X_gauss2[:,1] = u.inverse_GPD_emp(U_gauss2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
-
-plt.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
-            label = 'Gaussian Copula',s=1)
-plt.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
-plt.legend()
-plt.grid()
-plt.xlabel('Merck')
-plt.ylabel('IDU')
-plt.show()
-
-## Try with a Gumbel. 
+# t-copula 
+U_t2 = copulas.simul_t_distr(rho_mat_2,nu_pf2,N_sim)
+# Convert to returns:
+X_t2 = U_t2.copy()
+X_t2[:,0] = u.inverse_GPD_emp(U_t2[:,0],np.sort(goog_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_t2[:,1] = u.inverse_GPD_emp(U_t2[:,1],np.sort(msft_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+# Gumbel
 theta = 1 / (1-rho_tau_pf2)
 u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
 # We then need to transform to X.
@@ -453,17 +434,59 @@ X_gumb2[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
 X_gumb2[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
-plt.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
-            label = 'Gumbel Copula',s=1)
-plt.xlabel('Merck')
-plt.ylabel('IDU')
-plt.legend()
-plt.grid()
-plt.show()
 
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
+# Plot Google & Microsoft
+ax1 = ax[0,0]
+ax1.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+ax1.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax1.legend()
+ax1.grid()
+ax1.set_xlabel('Merck')
+ax1.set_ylabel('IDU')
+# t-copula
+ax2 = ax[0,1]
+ax2.scatter(X_t2[:,0],X_t2[:,1],color='red',
+            label = 't-Copula',s=1)
+ax2.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax2.set_xlabel('Merck')
+ax2.set_ylabel('IDU')
+ax2.legend()
+ax2.grid()
+## Try with a Gumbel. 
+ax3 = ax[1,0]
+ax3.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
+            label = 'Gumbel Copula',s=1)
+ax3.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax3.set_xlabel('Merck')
+ax3.set_ylabel('IDU')
+ax3.legend()
+ax3.grid()
+fig.tight_layout()
+plt.show()
 
 ### 6. Frechet Bounds
 ## Comonotonic copula. 
+# Simulation could look something like:
+u_com1 = copulas.simul_frechet_bound_M(N_sim=N_sim)
+# We then need to transform to X.
+X_com1 = np.empty(shape=u_com1.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_com1[:,0] = u.inverse_GPD_emp(u_com1[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_com1[:,1] = u.inverse_GPD_emp(u_com1[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+u_com2 = copulas.simul_frechet_bound_M(N_sim=N_sim)
+# We then need to transform to X.
+X_com2 = np.empty(shape=u_com2.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_com2[:,0] = u.inverse_GPD_emp(u_com2[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_com2[:,1] = u.inverse_GPD_emp(u_com2[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+
+
 
 ### 7. Calculate VaR using varous approaches.
 S_0 = np.array([10000,10000])
@@ -518,3 +541,13 @@ print(f"Gumbel Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 L_cop_pf2 = L_fun((-1)*X_gumb2,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Gumbel Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+## Comonotonic copula (worst case).
+L_cop_pf1 = L_fun((-1)*X_com1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_com2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
