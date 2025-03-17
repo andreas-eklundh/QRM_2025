@@ -9,6 +9,7 @@ from scipy.stats import multivariate_t as mt
 import pandas as pd
 # Utils
 import utils as u
+import copulae
 
 ## Set global seed.
 np.random.seed(2025)
@@ -327,8 +328,8 @@ for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i
 # Probably to be done for negative returns 
 rho_tau_pf1 = u.kendalls_tau(X_pf1_neg.T)
 rho_tau_pf2 = u.kendalls_tau(X_pf2_neg.T)
-print(f'rho tau pf1 {rho_tau_pf1}')
-print(f'rho tau pf2 {rho_tau_pf2}')
+print(f'rho tau pf1 {rho_tau_pf1.round(3)}')
+print(f'rho tau pf2 {rho_tau_pf2.round(3)}')
 # Based on kendall's tau, it seems that especially 
 # Microsoft and Google are comonotone. 
 # But in general somewhat comonotone. 
@@ -338,7 +339,7 @@ copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 4*10**5 # n_sim # 10**3
+N_sim = 4*10**6 # n_sim # 10**3
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -531,6 +532,17 @@ print(f"Gaussian Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 L_cop_pf2 = L_fun((-1)*X_gauss2,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Gaussian Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+## t-copula
+L_cop_pf1 = L_fun((-1)*X_t1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"t-Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_t2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"t-Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
 
 ## Copula (Gumbel) Approach: 
 L_cop_pf1 = L_fun((-1)*X_gumb1,S_0)

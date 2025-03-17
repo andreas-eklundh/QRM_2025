@@ -248,6 +248,7 @@ class Copulas():
         # psi = theta^{-1}
         # Step 2: Simulate V~G
         gamma = (np.cos(np.pi/(2*theta)))**theta
+        # Levy stable: Default parametrization as in Mcneil et al.
         V = levy_stable.rvs(alpha=1/theta,beta=1,scale=gamma,
                             size=N_sim).reshape((N_sim,1))
         # Step 3: Generate U_1,...,U_d
