@@ -6,14 +6,13 @@ from scipy.stats import norm ,binom, t, expon, invgamma, genpareto
 from scipy.optimize import minimize 
 from scipy.stats import multivariate_normal as mnorm
 from scipy.stats import multivariate_t as mt
+from scipy.interpolate import UnivariateSpline # for smoothing
 import pandas as pd
 # Utils
 import utils as u
-import copulae
 
 ## Set global seed.
 np.random.seed(2025)
-
 # read data and initial prep. 
 data = pd.read_csv(f'Data/stock_data.csv').sort_values('Date')
 N_obs = len(data['Date'])
@@ -29,8 +28,6 @@ goog,msft = np.array(data['X_GOOG']),np.array(data['X_MSFT'])
 mrk,idu = np.array(data['X_MRK']),np.array(data['X_IDU'])
 # Get negative returns
 goog_neg,msft_neg,mrk_neg,idu_neg = goog*(-1),msft*(-1), mrk*(-1),idu*(-1)
-
-
 
 ### 1. Marginal distributions for each stock.
 u.marginal_plots(goog_neg,name_list[0]+'_QQ',df1=2,df2=3,df3=4,df4=5,df5=6,markersize=5)
@@ -78,8 +75,6 @@ a_mrk,a_idu = u.HillEstimator(mrk_neg,H_k_mrk),u.HillEstimator(idu_neg,H_k_idu)
 print(f"Indixes: google:{a_goog.round(2)},Microsoft:{a_msft.round(2)}")
 print(f"MRK:{a_mrk.round(2)},IDU:{a_idu.round(2)}")
 hill_list = [a_goog,a_msft,a_mrk,a_idu ]
-# Coult then be a t-distr with these dfs, or slowly varying
-# With these indices. 
 # This methodology indicates that the 
 # choices from previously was not too much off. 
 
@@ -100,7 +95,6 @@ for X,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],name_list):
     plt.savefig(f'Figures/{name}_Mean_excess.png')
     plt.show()
 
-# OBS: the X's and k's do not allign yet -> Do negative sort.
 # Get k's - difficult for google nad microsoft.. 
 # u_goog,u_msft,u_MRK, u_IDU=0.025, 0.04, 0.015, 0.02
 u_goog,u_msft,u_MRK, u_IDU=0.045, 0.04, 0.015, 0.015
@@ -110,11 +104,8 @@ pot_indices,beta_list,gamma_list = [],[],[]
 for X,thres,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list):
     x_sorted = - np.sort(-X) # Sort decending. 
     k_idx = np.argmin(x_sorted>thres) - 1 
-    # -1 as idx is where it goes below
     k = k_idx + 1 # plus 1 as e.g. idx 3 corresponds to 4.
     print(f"k is {k} (in idx terms), val of k {x_sorted[k_idx]}")
-    # So k = 50 is okay i guess. 
-    # Get exesses axcross 
     n_obs = x_sorted.shape[0]
     # tnumber exeeding threshold and retransform. 
     x_k =  x_sorted[k_idx]
@@ -183,8 +174,6 @@ print(f'Google t-index: {dflist[0]}, Hill: {hill_list[0].round(2)}, POT: {pot_in
 print(f'Microsoft t-index: {dflist[1]}, Hill: {hill_list[1].round(2)}, POT: {pot_indices[1].round(2)}')
 print(f'Merck t-index: {dflist[2]}, Hill: {hill_list[2].round(2)}, POT: {pot_indices[2].round(2)}')
 print(f'IDU t-index: {dflist[3]}, Hill: {hill_list[3].round(2)}, POT: {pot_indices[3].round(2)}')
-
-
 print(f'Google beta {beta_list[0].round(4)}, gamma: {gamma_list[0].round(3)}')
 print(f'Microsoft beta {beta_list[1].round(4)}, gamma: {gamma_list[1].round(3)}')
 print(f'Merck beta{beta_list[2].round(4)}, gamma: {gamma_list[2].round(3)}')
@@ -299,8 +288,6 @@ fig.tight_layout()
 plt.show()
 
 ### 4. Copula approach.
-# For marginals, combine to get distribution fcts. 
-# These could be used in analysis below. 
 
 # Over u, use Pareto Tail.
 i_list = [0,1,2,3]
@@ -334,13 +321,11 @@ print(f'rho tau pf2 {rho_tau_pf2.round(3)}')
 # Based on kendall's tau, it seems that especially 
 # Microsoft and Google are comonotone. 
 # But in general somewhat comonotone. 
-
-# Propose Copula: 
 copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 10**5 # n_sim # 10**3
+N_sim = n_sim # 10**3
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -365,9 +350,9 @@ X_t1[:,0] = u.inverse_GPD_emp(U_t1[:,0],np.sort(goog_neg),
 X_t1[:,1] = u.inverse_GPD_emp(U_t1[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
 # Gumbel
-theta = 1 / (1-rho_tau_pf1)
+theta1 = 1 / (1-rho_tau_pf1)
 
-u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
+u_gumb = copulas.simul_gumbel(theta=theta1,dim=2,N_sim=N_sim)
 # We then need to transform to X.
 X_gumb1 = np.empty(shape=u_gumb.shape) 
 # Overwrite a matrix -> faster for these large matrices
@@ -375,36 +360,6 @@ X_gumb1[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(goog_neg),
                                   u_list[0],beta_list[0],gamma_list[0])
 X_gumb1[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(msft_neg),
                                   u_list[1],beta_list[1],gamma_list[1])
-
-fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
-# Plot Google & Microsoft
-ax1 = ax[0,0]
-ax1.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
-            label = 'Gaussian Copula',s=1)
-ax1.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-ax1.legend()
-ax1.grid()
-ax1.set_xlabel('Google')
-ax1.set_ylabel('Microsoft')
-ax2 = ax[0,1]
-ax2.scatter(X_t1[:,0],X_t1[:,1],color='red',
-            label = 't- Copula',s=1)
-ax2.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-ax2.legend()
-ax2.grid()
-ax2.set_xlabel('Google')
-ax2.set_ylabel('Microsoft')
-ax3 = ax[1,0]
-ax3.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
-            label = 'Gumbel Copula',s=1)
-ax3.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-ax3.legend()
-ax3.grid()
-ax3.set_xlabel('Google')
-ax3.set_ylabel('Microsoft')
-fig.tight_layout()
-plt.show()
-
 
 # Scond PF 
 # FITTING COPULAS
@@ -427,8 +382,8 @@ X_t2[:,0] = u.inverse_GPD_emp(U_t2[:,0],np.sort(goog_neg),
 X_t2[:,1] = u.inverse_GPD_emp(U_t2[:,1],np.sort(msft_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 # Gumbel
-theta = 1 / (1-rho_tau_pf2)
-u_gumb = copulas.simul_gumbel(theta=theta,dim=2,N_sim=N_sim)
+theta2 = 1 / (1-rho_tau_pf2)
+u_gumb = copulas.simul_gumbel(theta=theta2,dim=2,N_sim=N_sim)
 # We then need to transform to X.
 X_gumb2 = np.empty(shape=u_gumb.shape) 
 # Overwrite a matrix -> faster for these large matrices
@@ -437,36 +392,6 @@ X_gumb2[:,0] = u.inverse_GPD_emp(u_gumb[:,0],np.sort(mrk_neg),
 X_gumb2[:,1] = u.inverse_GPD_emp(u_gumb[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 
-fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
-# Plot Google & Microsoft
-ax1 = ax[0,0]
-ax1.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
-            label = 'Gaussian Copula',s=1)
-ax1.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
-ax1.legend()
-ax1.grid()
-ax1.set_xlabel('Merck')
-ax1.set_ylabel('IDU')
-# t-copula
-ax2 = ax[0,1]
-ax2.scatter(X_t2[:,0],X_t2[:,1],color='red',
-            label = 't-Copula',s=1)
-ax2.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
-ax2.set_xlabel('Merck')
-ax2.set_ylabel('IDU')
-ax2.legend()
-ax2.grid()
-## Try with a Gumbel. 
-ax3 = ax[1,0]
-ax3.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
-            label = 'Gumbel Copula',s=1)
-ax3.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
-ax3.set_xlabel('Merck')
-ax3.set_ylabel('IDU')
-ax3.legend()
-ax3.grid()
-fig.tight_layout()
-plt.show()
 
 ### 6. Frechet Bounds
 ## Comonotonic copula. 
@@ -506,7 +431,83 @@ X_coum2[:,1] = u.inverse_GPD_emp(u_coum2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 
 
+### Plotting of various copula simulatinos
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
+# Plot Google & Microsoft
+ax1 = ax[0,0]
+ax1.scatter(X_gauss1[:,0],X_gauss1[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+ax1.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax1.legend()
+ax1.grid()
+ax1.set_xlabel('Google')
+ax1.set_ylabel('Microsoft')
+ax2 = ax[0,1]
+ax2.scatter(X_t1[:,0],X_t1[:,1],color='red',
+            label = 't- Copula',s=1)
+ax2.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax2.legend()
+ax2.grid()
+ax2.set_xlabel('Google')
+ax2.set_ylabel('Microsoft')
+ax3 = ax[1,0]
+ax3.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
+            label = 'Gumbel Copula',s=1)
+ax3.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax3.legend()
+ax3.grid()
+ax3.set_xlabel('Google')
+ax3.set_ylabel('Microsoft')
+ax4 = ax[1,1]
+ax4.scatter(X_com1[:,0],X_com1[:,1],color='red',
+            label = 'Comonotonic Copula',s=1)
+ax4.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
+ax4.legend()
+ax4.grid()
+ax4.set_xlabel('Google')
+ax4.set_ylabel('Microsoft')
+fig.tight_layout()
+plt.show()
 
+
+fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
+# Plot Google & Microsoft
+ax1 = ax[0,0]
+ax1.scatter(X_gauss2[:,0],X_gauss2[:,1],color='red',
+            label = 'Gaussian Copula',s=1)
+ax1.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax1.legend()
+ax1.grid()
+ax1.set_xlabel('Merck')
+ax1.set_ylabel('IDU')
+# t-copula
+ax2 = ax[0,1]
+ax2.scatter(X_t2[:,0],X_t2[:,1],color='red',
+            label = 't-Copula',s=1)
+ax2.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax2.set_xlabel('Merck')
+ax2.set_ylabel('IDU')
+ax2.legend()
+ax2.grid()
+## Try with a Gumbel. 
+ax3 = ax[1,0]
+ax3.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
+            label = 'Gumbel Copula',s=1)
+ax3.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax3.set_xlabel('Merck')
+ax3.set_ylabel('IDU')
+ax3.legend()
+ax3.grid()
+ax4 = ax[1,1]
+ax4.scatter(X_com2[:,0],X_com2[:,1],color='red',
+            label = 'Comonotonic Copula',s=1)
+ax4.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+ax4.set_xlabel('Merck')
+ax4.set_ylabel('IDU')
+ax4.legend()
+ax4.grid()
+fig.tight_layout()
+plt.show()
 
 ### 7. Calculate VaR using varous approaches.
 S_0 = np.array([10000,10000])
@@ -528,6 +529,8 @@ print(f"Empirical VaR PF2 {VaR_emp_pf2.round(3)}")
 
 ## Elliptical approach. 
 # Simulate again urins N_sim
+np.random.seed(2025)
+N_sim = 10**7
 X_elliptical1 = mt.rvs(df=nu_pf1, loc=mu_fixed1, shape=dispersion_matrix1, size=N_sim)
 X_elliptical2 = mt.rvs(df=nu_pf2, loc=mu_fixed2, shape=dispersion_matrix2, size=N_sim)
 
@@ -542,28 +545,27 @@ L_el_pf2 = L_fun((-1)*X_elliptical2,S_0)
 VaR_el_pf2 = u.VaR(L_el_pf2,var_thres)
 print(f"Elliptical VaR PF2 {VaR_el_pf2.round(3)}")
 
-## Copula (Gaussian) Approach: 
-L_cop_pf1 = L_fun((-1)*X_gauss1,S_0)
-VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"Gaussian Copula VaR PF1 {VaR_cop_pf1.round(3)}")
-
-# Other index. 
-L_cop_pf2 = L_fun((-1)*X_gauss2,S_0)
-VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"Gaussian Copula VaR PF2 {VaR_cop_pf2.round(3)}")
-
-## t-copula
-L_cop_pf1 = L_fun((-1)*X_t1,S_0)
-VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"t-Copula VaR PF1 {VaR_cop_pf1.round(3)}")
-
-# Other index. 
-L_cop_pf2 = L_fun((-1)*X_t2,S_0)
-VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"t-Copula VaR PF2 {VaR_cop_pf2.round(3)}")
-
-
 ## Copula (Gumbel) Approach: 
+# Simulate from Copula
+u_gumb1 = copulas.simul_gumbel(theta=theta1,dim=2,N_sim=N_sim)
+# We then need to transform to X.
+X_gumb1 = np.empty(shape=u_gumb1.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_gumb1[:,0] = u.inverse_GPD_emp(u_gumb1[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_gumb1[:,1] = u.inverse_GPD_emp(u_gumb1[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+
+u_gumb2 = copulas.simul_gumbel(theta=theta2,dim=2,N_sim=N_sim)
+# We then need to transform to X.
+X_gumb2 = np.empty(shape=u_gumb2.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_gumb2[:,0] = u.inverse_GPD_emp(u_gumb2[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_gumb2[:,1] = u.inverse_GPD_emp(u_gumb2[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+
+# Tech 
 L_cop_pf1 = L_fun((-1)*X_gumb1,S_0)
 VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
 print(f"Gumbel Copula VaR PF1 {VaR_cop_pf1.round(3)}")
@@ -574,6 +576,25 @@ VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Gumbel Copula VaR PF2 {VaR_cop_pf2.round(3)}")
 
 ## Comonotonic copula (worst case).
+# Simul
+u_com1 = copulas.simul_frechet_bound_M(N_sim=N_sim)
+# We then need to transform to X.
+X_com1 = np.empty(shape=u_com1.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_com1[:,0] = u.inverse_GPD_emp(u_com1[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_com1[:,1] = u.inverse_GPD_emp(u_com1[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+u_com2 = copulas.simul_frechet_bound_M(N_sim=N_sim)
+# We then need to transform to X.
+X_com2 = np.empty(shape=u_com2.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_com2[:,0] = u.inverse_GPD_emp(u_com2[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_com2[:,1] = u.inverse_GPD_emp(u_com2[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+
+# Tech
 L_cop_pf1 = L_fun((-1)*X_com1,S_0)
 VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
 print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
@@ -583,12 +604,35 @@ L_cop_pf2 = L_fun((-1)*X_com2,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
 
-## Countermonotonic copula (worst case).
-L_cop_pf1 = L_fun((-1)*X_coum1,S_0)
-VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"Countermonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 
-# Other index. 
-L_cop_pf2 = L_fun((-1)*X_coum2,S_0)
-VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"Countermonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+
+## Copula (Gaussian) Approach: 
+# L_cop_pf1 = L_fun((-1)*X_gauss1,S_0)
+# VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+# print(f"Gaussian Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# # Other index. 
+# L_cop_pf2 = L_fun((-1)*X_gauss2,S_0)
+# VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+# print(f"Gaussian Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+# ## t-copula
+# L_cop_pf1 = L_fun((-1)*X_t1,S_0)
+# VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+# print(f"t-Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# # Other index. 
+# L_cop_pf2 = L_fun((-1)*X_t2,S_0)
+# VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+# print(f"t-Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+# ## Countermonotonic copula (worst case).
+# L_cop_pf1 = L_fun((-1)*X_coum1,S_0)
+# VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+# print(f"Countermonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# # Other index. 
+# L_cop_pf2 = L_fun((-1)*X_coum2,S_0)
+# VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+# print(f"Countermonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
