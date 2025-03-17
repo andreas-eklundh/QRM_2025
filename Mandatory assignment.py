@@ -173,6 +173,7 @@ for X,thres,name in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list):
     ax3.set_xlabel('Log returns (x)')
     ax3.legend()
     fig.tight_layout()
+    plt.savefig(f'Figures/{name}_fits.png')
     plt.show()
     pot_indices.append(1/gamma_hat)
 
@@ -339,7 +340,7 @@ copulas = u.Copulas()
 
 # Assuming this, we can use Theorem 11.7 to determine the
 # standard correlation .
-N_sim = 4*10**6 # n_sim # 10**3
+N_sim = 10**5 # n_sim # 10**3
 rho_gauss1 = np.sin(rho_tau_pf1*np.pi/2)
 rho_gauss2 = np.sin(rho_tau_pf2*np.pi/2)
 rho_mat_1 = np.array([[1,rho_gauss1],
@@ -487,6 +488,24 @@ X_com2[:,0] = u.inverse_GPD_emp(u_com2[:,0],np.sort(mrk_neg),
 X_com2[:,1] = u.inverse_GPD_emp(u_com2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
 
+u_coum1 = copulas.simul_frechet_bound_W(N_sim=N_sim)
+# We then need to transform to X.
+X_coum1 = np.empty(shape=u_coum1.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_coum1[:,0] = u.inverse_GPD_emp(u_coum1[:,0],np.sort(goog_neg),
+                                  u_list[0],beta_list[0],gamma_list[0])
+X_coum1[:,1] = u.inverse_GPD_emp(u_coum1[:,1],np.sort(msft_neg),
+                                  u_list[1],beta_list[1],gamma_list[1])
+u_coum2 = copulas.simul_frechet_bound_W(N_sim=N_sim)
+# We then need to transform to X.
+X_coum2 = np.empty(shape=u_coum2.shape) 
+# Overwrite a matrix -> faster for these large matrices
+X_coum2[:,0] = u.inverse_GPD_emp(u_coum2[:,0],np.sort(mrk_neg),
+                                  u_list[2],beta_list[2],gamma_list[2])
+X_coum2[:,1] = u.inverse_GPD_emp(u_coum2[:,1],np.sort(idu_neg),
+                                  u_list[3],beta_list[3],gamma_list[3])
+
+
 
 
 ### 7. Calculate VaR using varous approaches.
@@ -563,3 +582,13 @@ print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 L_cop_pf2 = L_fun((-1)*X_com2,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
+
+## Countermonotonic copula (worst case).
+L_cop_pf1 = L_fun((-1)*X_coum1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Countermonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
+
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_coum2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Countermonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
