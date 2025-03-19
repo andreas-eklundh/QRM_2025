@@ -474,7 +474,7 @@ plt.show()
 # plot for saving.
 plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
             label = 'Simulated data from Gumbel Copula',s=1)
-plt.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+plt.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
 plt.xlabel('Google')
 plt.ylabel('Microsoft')
 plt.legend()
@@ -618,16 +618,6 @@ X_com2[:,0] = u.inverse_GPD_emp(u_com2[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
 X_com2[:,1] = u.inverse_GPD_emp(u_com2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
-
-# Tech
-L_cop_pf1 = L_fun((-1)*X_com1,S_0)
-VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
-print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
-
-# Other index. 
-L_cop_pf2 = L_fun((-1)*X_com2,S_0)
-VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
-print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
 
 
 
