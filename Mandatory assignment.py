@@ -276,24 +276,25 @@ fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
 # Plot Google & Microsoft
 ax1 = ax[0]
 ax1.scatter(goog_neg, msft_neg, color='blue', s=1, label="Empirical Data")
-ax1.scatter(sim_goog, sim_msft, color='red', s=1, alpha=0.5, label="Simulated Data")
+ax1.scatter(sim_goog, sim_msft, color='red', s=1, alpha=0.5, label=f"Simulated Data (df={nu_pf1:.2f})")
 ax1.grid()
 ax1.set_xlabel('Google')
 ax1.set_ylabel('Microsoft')
-ax1.set_title('Log Returns: Google & Microsoft')
+ax1.set_title('Negative Log Returns: Google & Microsoft')
 ax1.legend()
 
 # Plot Merck & IDU
 ax2 = ax[1]
 ax2.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
-ax2.scatter(sim_mrk, sim_idu, color='red', s=1, alpha=0.5, label="Simulated Data")
+ax2.scatter(sim_mrk, sim_idu, color='red', s=1, alpha=0.5, label=f"Simulated Data (df={nu_pf2:.2f})")
 ax2.grid()
 ax2.set_xlabel('Merck')
 ax2.set_ylabel('IDU')
-ax2.set_title('Log Returns: Merck & IDU')
+ax2.set_title('Negative Log Returns: Merck & IDU')
 ax2.legend()
 
 fig.tight_layout()
+plt.savefig('Figures/Multivariate-t_plot.png')
 plt.show()
 
 ### 4. Copula approach.
@@ -303,18 +304,19 @@ plt.show()
 # Over u, use Pareto Tail.
 i_list = [0,1,2,3]
 for X,thres,name,i in zip([goog_neg,msft_neg,mrk_neg,idu_neg],u_list,name_list,i_list):
-    x_sorted = - np.sort(-X) # Sort decending. 
+    x_sorted = - np.sort(-X) # Sort descending. 
     n = x_sorted.shape[0]
     beta_est = beta_list[i]
-    gamma_est = beta_list[i]
-    # Get exesses axcross 
-    F_marginal = u.GPD_emp(np.sort(x_sorted),x_k,beta_est,gamma_est)
-    F_emp = np.cumsum(np.ones(n)*1/(n))
+    gamma_est = gamma_list[i]
+    # Get excesses across 
+    x_k = thres
+    F_marginal = u.GPD_emp(np.sort(x_sorted), x_k, beta_est, gamma_est)
+    #F_emp = np.cumsum(np.ones(n) * 1 / n)
 
     # Add empirical
-    plt.plot(np.sort(x_sorted),F_marginal, color='red',
-             label = 'Marginal mixed emp and GPD')
-    plt.legend()
+    plt.plot(np.sort(x_sorted), F_marginal, color='red', label='Marginal mixed emp and GPD')
+    plt.axvline(x=x_k, color='blue', linestyle='--', label=f'Threshold x_k = {x_k:.3f}')
+    plt.legend(loc='upper left')
     plt.xlabel("Log returns")
     plt.ylabel("Distribution function")
     plt.grid()
