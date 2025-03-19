@@ -570,7 +570,8 @@ L_el_pf2 = L_fun((-1)*X_elliptical2,S_0)
 VaR_el_pf2 = u.VaR(L_el_pf2,var_thres)
 print(f"Elliptical VaR PF2 {VaR_el_pf2.round(3)}")
 
-## Copula (Gumbel) Approach: 
+## Copula (Gumbel) Approach:
+# NOTE: THESE COPULA APPROACHES ARE SOMEWHAT SLOW. 
 # Simulate from Copula
 u_gumb1 = copulas.simul_gumbel(theta=theta1,dim=2,N_sim=N_sim)
 # We then need to transform to X.
@@ -618,7 +619,15 @@ X_com2[:,0] = u.inverse_GPD_emp(u_com2[:,0],np.sort(mrk_neg),
                                   u_list[2],beta_list[2],gamma_list[2])
 X_com2[:,1] = u.inverse_GPD_emp(u_com2[:,1],np.sort(idu_neg),
                                   u_list[3],beta_list[3],gamma_list[3])
+# Tech 
+L_cop_pf1 = L_fun((-1)*X_com1,S_0)
+VaR_cop_pf1 = u.VaR(L_cop_pf1,var_thres)
+print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 
+# Other index. 
+L_cop_pf2 = L_fun((-1)*X_com2,S_0)
+VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
+print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
 
 
 ## Copula (Gaussian) Approach: 
