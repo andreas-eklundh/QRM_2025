@@ -469,6 +469,17 @@ ax4.set_ylabel('Microsoft')
 fig.tight_layout()
 plt.show()
 
+# plot for saving.
+plt.scatter(X_gumb1[:,0],X_gumb1[:,1],color='red',
+            label = 'Simulated data from Gumbel Copula',s=1)
+plt.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+plt.xlabel('Google')
+plt.ylabel('Microsoft')
+plt.legend()
+plt.grid()
+plt.savefig(f"Figures/Copula_pf1.png")
+plt.show()
+
 
 fig, ax = plt.subplots(nrows=2, ncols=2, figsize=(10, 5))
 # Plot Google & Microsoft
@@ -508,6 +519,18 @@ ax4.legend()
 ax4.grid()
 fig.tight_layout()
 plt.show()
+
+# Plot for svaing.
+plt.scatter(X_gumb2[:,0],X_gumb2[:,1],color='red',
+            label = 'Simulated data from Gumbel Copula',s=1)
+plt.scatter(mrk_neg, idu_neg, color='blue', s=1, label="Empirical Data")
+plt.xlabel('Merck')
+plt.ylabel('IDU')
+plt.legend()
+plt.grid()
+plt.savefig(f"Figures/Copula_pf2.png")
+plt.show()
+
 
 ### 7. Calculate VaR using varous approaches.
 S_0 = np.array([10000,10000])
@@ -603,7 +626,6 @@ print(f"Comonotonic Copula VaR PF1 {VaR_cop_pf1.round(3)}")
 L_cop_pf2 = L_fun((-1)*X_com2,S_0)
 VaR_cop_pf2 = u.VaR(L_cop_pf2,var_thres)
 print(f"Comonotonic Copula VaR PF2 {VaR_cop_pf2.round(3)}")
-
 
 
 
